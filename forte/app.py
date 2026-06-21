@@ -50,22 +50,21 @@ def on_connect():
 
 @socketio.on("listen")
 def on_listen(_payload=None):
-    def run():
-        emit("status", {"state": "listening"})
-        try:
-            transcript = assistant.record_and_transcribe()
-            emit("transcript", {"text": transcript})
-            emit("status", {"state": "thinking"})
-            response_text = assistant.chat(transcript)
-            emit("response", {"text": response_text})
-            emit("status", {"state": "speaking"})
-            assistant.speech.speak(response_text)
-            emit("status", {"state": "ready"})
-        except Exception as e:
-            emit("error", {"message": str(e)})
-            emit("status", {"state": "ready"})
-
-    threading.Thread(target=run, daemon=True).start()
+    # Important: don't use `emit()` from a background thread without the
+    # request context. Emit from the socket handler thread instead.
+    emit("status", {"state": "listening"})
+    try:
+        transcript = assistant.record_and_transcribe()
+        emit("transcript", {"text": transcript})
+        emit("status", {"state": "thinking"})
+        response_text = assistant.chat(transcript)
+        emit("response", {"text": response_text})
+        emit("status", {"state": "speaking"})
+        assistant.speech.speak(response_text)
+        emit("status", {"state": "ready"})
+    except Exception as e:
+        emit("error", {"message": str(e)})
+        emit("status", {"state": "ready"})
 
 
 @socketio.on("quick_action")
