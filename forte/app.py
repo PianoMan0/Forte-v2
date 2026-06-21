@@ -1,9 +1,9 @@
 import json
 import os
-import threading
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+
 
 try:
     # When run as `python -m forte.app`
@@ -75,16 +75,9 @@ def _background_listen(sid: str | None):
 @socketio.on("listen")
 def on_listen(_payload=None):
     # Offload blocking work to a background task.
-    sid = getattr(flask_socketio, "request", None)
-    try:
-        from flask import request as flask_request
+    # Don't use Flask `emit()` here; use Socket.IO's `socketio.emit()` in the background task.
+    socketio.start_background_task(_background_listen, None)
 
-        sid = flask_request.sid
-    except Exception:
-        # If we can't get sid, omit room targeting.
-        sid = None
-
-    socketio.start_background_task(_background_listen, sid)
 
 
 
