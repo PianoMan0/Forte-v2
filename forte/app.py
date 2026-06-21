@@ -48,23 +48,44 @@ def on_connect():
     emit("status", {"state": "ready"})
 
 
+def _emit_to_sid(sid, event: str, payload: dict):
+    # Use the Socket.IO server API so this works even without Flask request context.
+    # If sid is None, broadcast (or follow Socket.IO default behavior).
+    socketio.emit(event, payload, room=sid) if sid is not None else socketio.emit(event, payload)
+
+
+
+def _background_listen(sid: str | None):
+    try:
+        _emit_to_sid(sid, "status", {"state": "listening"})
+        transcript = assistant.record_and_transcribe()
+        _emit_to_sid(sid, "transcript", {"text": transcript})
+        _emit_to_sid(sid, "status", {"state": "thinking"})
+        response_text = assistant.chat(transcript)
+        _emit_to_sid(sid, "response", {"text": response_text})
+        _emit_to_sid(sid, "status", {"state": "speaking"})
+        assistant.speech.speak(response_text)
+        _emit_to_sid(sid, "status", {"state": "ready"})
+    except Exception as e:
+        _emit_to_sid(sid, "error", {"message": str(e)})
+        _emit_to_sid(sid, "status", {"state": "ready"})
+
+
+
 @socketio.on("listen")
 def on_listen(_payload=None):
-    # Important: don't use `emit()` from a background thread without the
-    # request context. Emit from the socket handler thread instead.
-    emit("status", {"state": "listening"})
+    # Offload blocking work to a background task.
+    sid = getattr(flask_socketio, "request", None)
     try:
-        transcript = assistant.record_and_transcribe()
-        emit("transcript", {"text": transcript})
-        emit("status", {"state": "thinking"})
-        response_text = assistant.chat(transcript)
-        emit("response", {"text": response_text})
-        emit("status", {"state": "speaking"})
-        assistant.speech.speak(response_text)
-        emit("status", {"state": "ready"})
-    except Exception as e:
-        emit("error", {"message": str(e)})
-        emit("status", {"state": "ready"})
+        from flask import request as flask_request
+
+        sid = flask_request.sid
+    except Exception:
+        # If we can't get sid, omit room targeting.
+        sid = None
+
+    socketio.start_background_task(_background_listen, sid)
+
 
 
 @socketio.on("quick_action")
