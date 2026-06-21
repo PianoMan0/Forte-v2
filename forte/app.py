@@ -74,9 +74,11 @@ def _background_listen(sid: str | None):
 
 @socketio.on("listen")
 def on_listen(_payload=None):
-    # Offload blocking work to a background task.
-    # Don't use Flask `emit()` here; use Socket.IO's `socketio.emit()` in the background task.
+    # Start background work; emit progress from the background using socketio.emit.
     socketio.start_background_task(_background_listen, None)
+
+
+
 
 
 
