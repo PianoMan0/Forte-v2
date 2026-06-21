@@ -74,8 +74,10 @@ def _background_listen(sid: str | None):
 
 @socketio.on("listen")
 def on_listen(_payload=None):
-    # Start background work; emit progress from the background using socketio.emit.
+    # Start background work; background progress uses socketio.emit via _emit_to_sid.
+    # Some clients/tests may be using an older websocket stack; avoid Flask emit in threads.
     socketio.start_background_task(_background_listen, None)
+
 
 
 
