@@ -1,8 +1,8 @@
 import json
 import os
-import time
 import threading
-from flask import Flask, render_template, request
+
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
 try:
@@ -11,8 +11,6 @@ try:
 except ImportError:
     # When run as a script: `python forte/app.py`
     from assistant.engine import Assistant
-
-
 
 
 def load_config():
@@ -28,11 +26,14 @@ def load_config():
         return json.load(f)
 
 
-app = Flask(__name__, template_folder="dashboard/templates", static_folder="dashboard/static")
+app = Flask(
+    __name__,
+    template_folder="dashboard/templates",
+    static_folder="dashboard/static",
+)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev")
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
 
 assistant = Assistant(config=load_config())
 
@@ -58,7 +59,7 @@ def on_listen(_payload=None):
             response_text = assistant.chat(transcript)
             emit("response", {"text": response_text})
             emit("status", {"state": "speaking"})
-            assistant.speak(response_text)
+            assistant.speech.speak(response_text)
             emit("status", {"state": "ready"})
         except Exception as e:
             emit("error", {"message": str(e)})
@@ -69,13 +70,12 @@ def on_listen(_payload=None):
 
 @socketio.on("quick_action")
 def on_quick_action(data):
-    # Example: data = {"action": "time"}
     action = (data or {}).get("action")
     emit("status", {"state": "thinking"})
     try:
         response_text = assistant.quick_action(action)
         emit("response", {"text": response_text})
-        assistant.speak(response_text)
+        assistant.speech.speak(response_text)
         emit("status", {"state": "ready"})
     except Exception as e:
         emit("error", {"message": str(e)})
@@ -83,6 +83,5 @@ def on_quick_action(data):
 
 
 if __name__ == "__main__":
-    # For Pi: use eventlet worker
     socketio.run(app, host="0.0.0.0", port=5000)
 
