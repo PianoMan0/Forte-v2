@@ -1,0 +1,18 @@
+{
+  "cloud": {
+    "openai": {
+      "api_key": "REPLACE_ME",
+      "model": "gpt-4o-mini"
+    }
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "record_seconds": 6,
+    "stt_language": "en-US"
+  },
+  "ui": {
+    "name": "Forte"
+  }
+}
+

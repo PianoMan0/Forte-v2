@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ name }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">{{ name }}</div>
+      <div class="status" id="status">ready</div>
+    </header>
+
+    <main>
+      <div class="panel">
+        <div class="label">Heard</div>
+        <div class="value" id="transcript">—</div>
+      </div>
+
+      <div class="panel">
+        <div class="label">Response</div>
+        <div class="value" id="response">—</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="listenBtn">🎙️ Listen</button>
+        <button class="btn" id="timeBtn">🕒 Time</button>
+        <button class="btn" id="dateBtn">📅 Date</button>
+      </div>
+
+      <div class="hint">Tip: press <b>Listen</b>, then speak naturally.</div>
+    </main>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    const statusEl = document.getElementById('status');
+    const transcriptEl = document.getElementById('transcript');
+    const responseEl = document.getElementById('response');
+
+    function setStatus(s){ statusEl.textContent = s; }
+
+    socket.on('connect', () => { setStatus('ready'); });
+    socket.on('status', (data) => { setStatus(data.state || 'ready'); });
+    socket.on('transcript', (data) => { transcriptEl.textContent = data.text || '—'; });
+    socket.on('response', (data) => { responseEl.textContent = data.text || '—'; });
+    socket.on('error', (data) => { responseEl.textContent = 'Error: ' + (data.message || 'unknown'); });
+
+    document.getElementById('listenBtn').addEventListener('click', () => {
+      transcriptEl.textContent = '…';
+      responseEl.textContent = '…';
+      socket.emit('listen', {});
+    });
+
+    document.getElementById('timeBtn').addEventListener('click', () => {
+      socket.emit('quick_action', { action: 'time' });
+    });
+
+    document.getElementById('dateBtn').addEventListener('click', () => {
+      socket.emit('quick_action', { action: 'date' });
+    });
+  </script>
+</body>
+</html>
+

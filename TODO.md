@@ -1,0 +1,2 @@
+- Add wake words
+- Add wikipedia search
